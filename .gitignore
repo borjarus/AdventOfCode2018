@@ -1,0 +1,5 @@
+.vscode/launch.json
+.vscode/tasks.json
+src/App/bin
+AdventOfCode2018.sln
+src/App/obj
