@@ -6,8 +6,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="day1-1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Compile Include="Helpers.fs" />
     <Compile Include="Day1.fs" />
     <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup />
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.5.4" />
   </ItemGroup>
 
 </Project>

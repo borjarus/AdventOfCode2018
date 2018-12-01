@@ -3,3 +3,5 @@
 src/App/bin
 AdventOfCode2018.sln
 src/App/obj
+/.vs
+/src/App/Properties
