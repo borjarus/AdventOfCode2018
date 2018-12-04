@@ -50,6 +50,16 @@ While this example listed the entries in chronological order, your entries are i
 
 What is the ID of the guard you chose multiplied by the minute you chose? (In the above example, the answer would be 10 * 24 = 240.)
 
+
+--- Part Two ---
+
+Strategy 2: Of all guards, which guard is most frequently asleep on the same minute?
+
+In the example above, Guard #99 spent minute 45 asleep more than any other guard or minute - three times in total. (In all other cases, any guard spent any minute asleep at most twice.)
+
+What is the ID of the guard you chose multiplied by the minute you chose? (In the above example, the answer would be 99 * 45 = 4455.)
+
+
 *)
 
 module App.Day4
@@ -61,8 +71,14 @@ open System
 
     type ActionRec = {
         GuardId: int
-        GuardCycles: (DateTime * DateTime)
-    }
+        GuardCycles: (DateTime * DateTime) list
+    } 
+        with 
+            static member GuardedBy {GuardId = guard} = guard
+            static member SleepsAt {GuardCycles = cycles} = cycles 
+            static member WasSleeping min {GuardCycles = cycles} =
+                cycles |> List.exists (fun (s,e) ->
+                    min >= s.Minute && min < e.Minute)
 
     let rec parseCycles inp =
         match inp with 
@@ -74,7 +90,7 @@ open System
 
     let rec parsingActions inp =
         match inp with
-        | (dt, (ShiftStart guardId)) :: rest ->
+        | (_, (ShiftStart guardId))::rest ->
             let sCycles, rest = parseCycles rest
             let act = parsingActions rest
             {GuardId= guardId; GuardCycles= sCycles} :: act
@@ -88,7 +104,7 @@ open System
         let mainP = @"\[(\d+)-(\d+)-(\d+) (\d+):(\d+)\] (.+)"
         let guardP = @"Guard #(\d+) begins shift"
 
-        let out: ActionType seq = 
+        let out = 
             seq' |> Seq.map (fun s ->
                 match s with 
                 | Regex mainP [y;m;d;h;min;r] ->
@@ -126,24 +142,111 @@ open System
 [1518-11-05 00:45] falls asleep\n
 [1518-11-05 00:55] wakes up"
 
-        input 
-        |> parseLinesByRegexp 
-        |> Seq.sortBy fst
-        |> Seq.toList
-        |> parsingActions
+        let parsedData = 
+            input 
+            |> parseLinesByRegexp 
+            |> Seq.sortBy fst
+            |> Seq.toList
+            |> parsingActions
+            |> List.groupBy ActionRec.GuardedBy
+        
+        let guardIdMostlySleepy, actionRecMostlySleepy = 
+            parsedData
+            |> List.sortByDescending (fun (_, act) ->
+                act
+                |> List.map ActionRec.SleepsAt
+                |> List.concat
+                |> List.sumBy (fun (s,e) -> (e - s).Minutes)
+            )
+            |> List.head
+
+        let whichMinuteGuardOftenSleep =
+            [0 .. 59]
+            |> List.sortByDescending (fun m ->
+                actionRecMostlySleepy 
+                |> List.filter (ActionRec.WasSleeping m)
+                |> List.length )
+            |> List.head
+
+        guardIdMostlySleepy * whichMinuteGuardOftenSleep
+
+
 
 
             
 
     let examples2() = 
-        ()
+        let input = parseLines "[1518-11-01 00:00] Guard #10 begins shift\n
+[1518-11-01 00:05] falls asleep\n
+[1518-11-01 00:25] wakes up\n
+[1518-11-01 00:30] falls asleep\n
+[1518-11-01 00:55] wakes up\n
+[1518-11-01 23:58] Guard #99 begins shift\n
+[1518-11-02 00:40] falls asleep\n
+[1518-11-02 00:50] wakes up\n
+[1518-11-03 00:05] Guard #10 begins shift\n
+[1518-11-03 00:24] falls asleep\n
+[1518-11-03 00:29] wakes up\n
+[1518-11-04 00:02] Guard #99 begins shift\n
+[1518-11-04 00:36] falls asleep\n
+[1518-11-04 00:46] wakes up\n
+[1518-11-05 00:03] Guard #99 begins shift\n
+[1518-11-05 00:45] falls asleep\n
+[1518-11-05 00:55] wakes up"
+
+        let parsedData = 
+            input 
+            |> parseLinesByRegexp 
+            |> Seq.sortBy fst
+            |> Seq.toList
+            |> parsingActions
+            |> List.groupBy ActionRec.GuardedBy
+
+        let (mostSleptMinute, (whitchGuard, _)) =
+            [0 .. 59] |*| parsedData
+            |> Seq.sortByDescending (fun (min, ( _, act)) ->
+                act 
+                |> List.filter (ActionRec.WasSleeping min)
+                |> List.length
+            )
+            |> Seq.head
+
+        whitchGuard * mostSleptMinute
+
 
 
 
 
 
     let part1() = 
-        ()
+        let input = readLinesFromFile(@"day4.txt")
+        let parsedData = 
+            input 
+            |> parseLinesByRegexp 
+            |> Seq.sortBy fst
+            |> Seq.toList
+            |> parsingActions
+            |> List.groupBy ActionRec.GuardedBy
+        
+        let guardIdMostlySleepy, actionRecMostlySleepy = 
+            parsedData
+            |> List.sortByDescending (fun (_, act) ->
+                act
+                |> List.map ActionRec.SleepsAt
+                |> List.concat
+                |> List.sumBy (fun (s,e) -> (e - s).Minutes)
+            )
+            |> List.head
+
+        let whichMinuteGuardOftenSleep =
+            [0 .. 59]
+            |> List.sortByDescending (fun m ->
+                actionRecMostlySleepy 
+                |> List.filter (ActionRec.WasSleeping m)
+                |> List.length )
+            |> List.head
+
+        guardIdMostlySleepy * whichMinuteGuardOftenSleep
 
     let part2() = 
         ()
