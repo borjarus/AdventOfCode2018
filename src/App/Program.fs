@@ -6,6 +6,7 @@
                     | [|day|] -> match day with
                                     | "1" -> sprintf "%A" <| Day1.part2()
                                     | "2" -> sprintf "%A" <| Day2.part2()
+                                    | "3" -> sprintf "%A" <| Day3.part2()
                                     | _ -> ""
                     | _ -> "Insert number of day as parameter" 
         printfn "%s" out

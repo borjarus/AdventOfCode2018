@@ -3,12 +3,6 @@
 open System.IO
 open System.Text.RegularExpressions
 
-let readLinesFromFile (filePath:string) = seq {
-    use sr = new StreamReader (filePath)
-    while not sr.EndOfStream do
-        yield sr.ReadLine ()
-}
-
 let readLines(s: string) =
     s.Split [| '\n' |] 
 
@@ -20,6 +14,14 @@ let parseLines (s: string) =
         | "\n" -> None
         | row -> Some row)
     |> Seq.ofArray
+
+let readLinesFromFile (filePath:string) = seq {
+    use sr = new StreamReader (filePath)
+    while not sr.EndOfStream do
+        yield sr.ReadLine()
+}
+
+
 
 let (|Regex|_|) pattern input =
         let m = Regex.Match(input, pattern)
