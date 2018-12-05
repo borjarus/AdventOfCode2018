@@ -249,4 +249,22 @@ open System
         guardIdMostlySleepy * whichMinuteGuardOftenSleep
 
     let part2() = 
-        ()
+        let input = readLinesFromFile(@"day4.txt")
+        let parsedData = 
+            input 
+            |> parseLinesByRegexp 
+            |> Seq.sortBy fst
+            |> Seq.toList
+            |> parsingActions
+            |> List.groupBy ActionRec.GuardedBy
+
+        let (mostSleptMinute, (whitchGuard, _)) =
+            [0 .. 59] |*| parsedData
+            |> Seq.sortByDescending (fun (min, ( _, act)) ->
+                act 
+                |> List.filter (ActionRec.WasSleeping min)
+                |> List.length
+            )
+            |> Seq.head
+
+        whitchGuard * mostSleptMinute
