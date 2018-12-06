@@ -78,6 +78,13 @@ open System
                 Some(Minus x, Plus y)
          | _ -> Some inp
 
+    let polymerComparator2 in1 in2 =
+        let i1, i2 = in1
+        let j1, j2 = in2
+        if Char.ToLower(i1) = Char.ToLower(j1) && Char.ToLower(i1) = Char.ToLower(j1) && Char.ToLower(i2) = Char.ToLower(j2)
+        then None
+        else Some (i1,i2)
+
     let polymerParser (inp: string) =
         let polymers = Seq.toList inp 
         let rec parse acc (inp: char list) =       
@@ -93,6 +100,19 @@ open System
             | _ -> failwith "parse error"
         parse [] polymers |> List.rev |> String.Concat
 
+    let polymerParserBest input =
+        let inp, t1, t2 = input
+        let polymers = Seq.toList inp 
+        let rec parse acc (inp: char list) =       
+            match inp with
+            | x :: y :: rest -> 
+                match polymerComparator2 (x,y) (t1, t2) with
+                | Some _ -> parse (x::acc) (y::rest)
+                | None -> parse [] (List.concat [acc |> List.rev ;rest])
+            | x :: _ -> parse (x::acc) [] 
+            | [] -> acc
+            | _ -> failwith "parse error"
+        parse [] polymers |> List.rev |> String.Concat
 
 
     let examples1() =
@@ -112,9 +132,15 @@ open System
             String.exists (fun c -> c = letter) input
         )
         |> List.map (fun (a,b) -> 
-            let x = input
-            let x = x.Replace(String.Concat(a,b), "")
-            x.Replace(String.Concat(a,b), ""))
+            
+            let optimized = 
+                input |> Seq.toList |> List.filter (fun el -> 
+                if el = a || el = b then false else true
+                ) |> String.Concat
+            (polymerParser optimized).Length
+
+
+        ) |> List.sort |> List.head
         //input |> Seq.toList |> List.map Char.ToLower |> List.distinct |> List.sortDescending
 
 
@@ -129,5 +155,20 @@ open System
 
 
     let part2() = 
-        let input = readLinesFromFile(@"day5.txt")
-        ()
+        let input = readLinesFromFile(@"day5.txt") |> Seq.head
+        
+        List.zip ['a'..'z'] ['A'..'Z']
+        |> List.filter (fun el ->
+            let letter = el |> fst
+            String.exists (fun c -> c = letter) input
+        )
+        |> List.map (fun (a,b) -> 
+            
+            let optimized = 
+                input |> Seq.toList |> List.filter (fun el -> 
+                if el = a || el = b then false else true
+                ) |> String.Concat
+            (polymerParser optimized).Length
+
+
+        ) |> List.sort |> List.head
