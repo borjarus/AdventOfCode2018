@@ -28,4 +28,11 @@ let (|Regex|_|) pattern input =
         if m.Success then Some(List.tail [ for g in m.Groups -> g.Value ])
         else None
 
+let (=>) a b = a, b
+
+let (|*|) s1 l2 =
+    s1
+    |> Seq.map (fun e1 -> l2 |> List.map ((=>) e1))
+    |> Seq.concat
+
 
