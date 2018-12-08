@@ -1,5 +1,6 @@
 ﻿module Helpers
 
+open System
 open System.IO
 open System.Text.RegularExpressions
 
@@ -35,4 +36,7 @@ let (|*|) s1 l2 =
     |> Seq.map (fun e1 -> l2 |> List.map ((=>) e1))
     |> Seq.concat
 
-
+module String =
+    let trim (s: string) = s.Trim()
+    let split (sep: string) (s: string) = (s.Split([| sep |], StringSplitOptions.None)) |> Array.toList
+    
