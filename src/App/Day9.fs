@@ -80,7 +80,7 @@ open System.Collections.Generic
         Index: int
         Marble: int
         Circle:  int list
-        Scores: int
+        Scores: Map<int,int>
     }
 
     //let counterClockwiseIndex circle index n =
@@ -101,47 +101,45 @@ open System.Collections.Generic
             prev @ [marble] @ next
         else 
             circle @ [marble]
+    
+    let removeFromCircle circle index =
+        let prev = circle |> List.take (index - 1)
+        let h::next = circle |> List.skip (index - 1)
+        prev @ next, h
 
 
     let newGame players =
         {
             Players= players
             Player= 1
-            Index= 1
+            Index= 2
             Marble= 1
-            Circle= [1; 0]
-            Scores= 0
+            Circle= [0;1]
+            Scores= Map.empty
         }
 
-    let advanceAction game =
-        let {Players= players; Player= player; Marble= marble; Index=index; Circle= circle; Scores= scores} = game
-        let game = {game with Marble= marble + 1; Player= (player % players) + 1}
-        let newIndex = placeIndex circle index
-        {game with Index= newIndex; Circle= makeNewCircle circle newIndex game.Marble}
-
-    //    //if marble % 23 = 0 
-    //    //then 
-    //    //    let removeindex = 
-    //    //    {game with 
-    //    //        index=  
-    //        }
-
-
-
-  //  (defn advance [game]
-  //(let [{:keys [players player index marble circle scores]} game
-  //      marble (inc marble)
-  //      player (inc (mod player players))
-  //      game   (assoc game :marble marble :player player)]
-  //  (if (zero? (mod marble 23))
-  //    (let [remove-index (counter-clockwise-index circle index 7)
-  //          scores       (update scores player + marble (circle remove-index))
-  //          circle       (dissoc circle remove-index)
-  //          index        (ffirst (or (subseq circle > remove-index) circle))]
-  //      (assoc game :index index :circle circle :scores scores))
-  //    (let [index  (place-index circle index)
-  //          circle (assoc circle index marble)]
-  //      (assoc game :index index :circle circle)))))
+    let advance game nth =
+        let rec nextAdvance game =
+            let {Players= players; Player= player; Marble= marble; Index=index; Circle= circle; Scores= score} = game
+            if marble = nth then game
+            else
+                let game = {game with Marble= marble + 1; Player= (player % players) + 1}
+                if (marble + 1) % 23 = 0 
+                then
+                    let newIndex, newIndex' = if (game.Index - 7) <= 0 then circle.Length + (game.Index - 7), circle.Length + (game.Index - 7)   else (game.Index - 7), (game.Index - 7)
+                    let newCircle, removedValue = removeFromCircle circle newIndex
+                    let newScore = 
+                        match score.TryFind(player) with
+                        | Some s -> (game.Marble + removedValue) + s
+                        | None -> (game.Marble + removedValue)
+                    
+                    nextAdvance {game with Index= newIndex'; Circle= newCircle; Scores= score.Add(game.Marble % game.Players, newScore )}
+                else         
+                    let newIndex = placeIndex circle index
+                    nextAdvance {game with Index= newIndex; Circle= makeNewCircle circle newIndex game.Marble}
+        
+        nextAdvance game
+        
 
 
 
@@ -149,11 +147,15 @@ open System.Collections.Generic
     let examples1() =
         let input = parseLines ""
 
-        advanceAction {Players= 9; Player= 1; Index= 2; Marble= 1; Circle= [0; 1]; Scores= 0}
-        advanceAction {Players= 9; Player= 2; Index= 2; Marble= 2; Circle= [0;2;1]; Scores= 0}
-        advanceAction {Players= 9; Player= 3; Index= 4; Marble= 3; Circle= [0;2;1;3]; Scores= 0}
-        advanceAction {Players= 9; Player= 4; Index= 2; Marble= 4; Circle= [0; 4; 2; 1; 3]; Scores= 0}
-        advanceAction {Players= 9; Player= 4; Index= 22; Marble= 22; Circle= [0;16;8;17;4;18;9;19;2;20;10;21;5;22;11;1;12;6;13;3;14;7;15]; Scores= 0}
+        //nextAdvance {Players= 9; Player= 1; Index= 2; Marble= 1; Circle= [0; 1]; Scores= 0}
+        //nextAdvance {Players= 9; Player= 2; Index= 2; Marble= 2; Circle= [0;2;1]; Scores= 0}
+        //nextAdvance {Players= 9; Player= 3; Index= 4; Marble= 3; Circle= [0;2;1;3]; Scores= 0}
+        //nextAdvance {Players= 9; Player= 4; Index= 2; Marble= 4; Circle= [0; 4; 2; 1; 3]; Scores= 0}
+        //nextAdvance {Players= 9; Player= 4; Index= 22; Marble= 23; Circle= [0;16;8;17;4;18;9;19;2;20;10;21;5;22;11;1;12;6;13;3;14;7;15]; Scores= 0}
+        advance (newGame 9) 25
+        //let {Scores= score} = advance (newGame 10) 1618 
+        advance (newGame 10) 1618
+        //advance (newGame 13) 7999
 
 
          
