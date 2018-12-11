@@ -22,6 +22,10 @@ let readLinesFromFile (filePath:string) = seq {
         yield sr.ReadLine()
 }
 
+let getOrDefault key (map: Map<'T,'U>) ``default`` = 
+    match map.TryFind(key) with
+    | Some s -> s
+    | None -> ``default``
 
 
 let (|Regex|_|) pattern input =
@@ -36,7 +40,18 @@ let (|*|) s1 l2 =
     |> Seq.map (fun e1 -> l2 |> List.map ((=>) e1))
     |> Seq.concat
 
+let cycle (lst:'a list) = 
+    let rec next () = 
+        seq {
+            for element in lst do
+                yield element
+            yield! next()
+        }
+    next()
+
 module String =
     let trim (s: string) = s.Trim()
     let split (sep: string) (s: string) = (s.Split([| sep |], StringSplitOptions.None)) |> Array.toList
+
+
     
