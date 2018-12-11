@@ -22,6 +22,10 @@ let readLinesFromFile (filePath:string) = seq {
         yield sr.ReadLine()
 }
 
+let getOrDefault key (map: Map<'T,'U>) ``default`` = 
+    match map.TryFind(key) with
+    | Some s -> s
+    | None -> ``default``
 
 
 let (|Regex|_|) pattern input =

@@ -71,53 +71,24 @@ What is the winning Elf's score?
 
 module App.Day9
 open Helpers
-open System.Collections.Generic
-open System.Runtime.Serialization
 
-    type Circle = {Before: int list; Current: int; After: int list}
+    type Circle = {Before: int64 list; Current: int64; After: int64 list}
 
     type GameArena = {
-        Players: int
-        Player: int
-        //Index: int
-        Marble: int
+        Players: int64
+        Player: int64
+        Marble: int64
         Circle:  Circle
-        Scores: Map<int,int>
+        Scores: Map<int64,int64>
     }
-
-
-    //let counterClockwiseIndex circle index n =
-    //    let rsubCircle = circle.Keys |> List.ofSeq |> List.filter ((<=) index) |> List.rev
-    //    List.concat 
-
-    let placeIndex (circle: int list) index =
-        let ub = circle.Length
-        if (index < ub)
-        then index + 2
-        else 2
-
-    //let makeNewCircle (circle: int list) index marble =
-    //    if index <= circle.Length
-    //    then 
-    //        let prev = circle |> List.take (index - 1)
-    //        let next = circle |> List.skip (index - 1)
-    //        prev @ [marble] @ next
-    //    else 
-    //        circle @ [marble]
-    
-    //let removeFromCircle circle index =
-    //    let prev = circle |> List.take (index - 1)
-    //    let h::next = circle |> List.skip (index - 1)
-    //    prev @ next, h
-
 
     let newGame players =
         {
             Players= players
-            Player= 0
+            Player= 1L
             //Index= 2
-            Marble= 0
-            Circle= {Before=[]; Current= 0; After=[]}
+            Marble= 1L
+            Circle= {Before=[]; Current= 0L; After=[]}
             Scores= Map.empty
         }
     
@@ -151,59 +122,42 @@ open System.Runtime.Serialization
     let advance game nth =
         let rec nextAdvance game =
             let {Players= players; Player= player; Marble= marble;  Circle= circle; Scores= score} = game
-            if marble <> nth 
-            then 
-                let newMarble = marble + 1
-                let newCircle = game.Circle |> rotate 1 |> insertMarble newMarble
-                nextAdvance {game with Circle= newCircle; Marble= newMarble; Player= (player % players) + 1}
-            else game
-        
+            if marble = nth  then game
+            elif marble % 23L = 0L 
+            then
+                let getScore = getOrDefault player score 0L
+                let rotated = circle |> rotate (-7)
+                let newScore = Map.add player (getScore + rotated.Current + marble) score
+                let newCircle = rotated |> removeCurrent
+                nextAdvance {game with Circle= newCircle; Marble= marble + 1L; Player= (player % players) + 1L; Scores= newScore}       
+            else 
+                let newCircle = game.Circle |> rotate 1 |> insertMarble marble
+                nextAdvance {game with Circle= newCircle; Marble= marble + 1L; Player= (player % players) + 1L}       
         nextAdvance game
 
-    //let advance game nth =
-    //    let rec nextAdvance game =
-    //        let {Players= players; Player= player; Marble= marble; Index=index; Circle= circle; Scores= score} = game
-    //        if marble = nth then game
-    //        else
-    //            let game = {game with Marble= marble + 1; Player= (player % players) + 1}
-    //            if (marble + 1) % 23 = 0 
-    //            then
-    //                let newIndex, newIndex' = if (game.Index - 7) <= 0 then circle.Length + (game.Index - 7), circle.Length + (game.Index - 7)   else (game.Index - 7), (game.Index - 7)
-    //                let newCircle, removedValue = removeFromCircle circle newIndex
-    //                let newScore = 
-    //                    match score.TryFind(player) with
-    //                    | Some s -> (game.Marble + removedValue) + s
-    //                    | None -> (game.Marble + removedValue)
-                    
-    //                nextAdvance {game with Index= newIndex'; Circle= newCircle; Scores= score.Add(game.Player % game.Players, newScore )}
-    //            else         
-    //                let newIndex = placeIndex circle index
-    //                nextAdvance {game with Index= newIndex; Circle= makeNewCircle circle newIndex game.Marble}
         
-    //    nextAdvance game
-        
-
+    let parseLine str =
+        match str with
+        | Regex @"(\d+) players; last marble is worth (\d+) points" [players; marblePoints] -> (players, marblePoints)
+        | _ -> failwith "parser error"
 
 
 
     let examples1() =
-        let input = parseLines ""
-        advance (newGame 9) 4
+        let input1 = "10 players; last marble is worth 1618 points: high score is 8317\n"
+        let input2 = "13 players; last marble is worth 7999 points: high score is 146373\n"
+        let input3 = "17 players; last marble is worth 1104 points: high score is 2764\n"
+        let input4 = "21 players; last marble is worth 6111 points: high score is 54718\n"
+        let input5 = "30 players; last marble is worth 5807 points: high score is 37305\n"
+        let input = parseLines <| String.concat "" [input1; input2; input3; input4; input5]
 
-
-        //nextAdvance {Players= 9; Player= 1; Index= 2; Marble= 1; Circle= [0; 1]; Scores= 0}
-        //nextAdvance {Players= 9; Player= 2; Index= 2; Marble= 2; Circle= [0;2;1]; Scores= 0}
-        //nextAdvance {Players= 9; Player= 3; Index= 4; Marble= 3; Circle= [0;2;1;3]; Scores= 0}
-        //nextAdvance {Players= 9; Player= 4; Index= 2; Marble= 4; Circle= [0; 4; 2; 1; 3]; Scores= 0}
-        //nextAdvance {Players= 9; Player= 4; Index= 22; Marble= 23; Circle= [0;16;8;17;4;18;9;19;2;20;10;21;5;22;11;1;12;6;13;3;14;7;15]; Scores= 0}
-        //advance (newGame 9) 25
-        //let {Scores= score} = advance (newGame 10) 1618 
-        //advance (newGame 10) 1618
-        //advance (newGame 13) 7999
-
-
-         
-
+        input
+        |> Seq.map parseLine
+        |> Seq.toList
+        |> List.map (fun (players, maxPoints) ->
+            let {Scores= score} = advance (newGame (int64 players)) (int64 maxPoints)
+            score |> Map.toSeq |> Seq.map snd |> Seq.max
+        )
 
 
     let examples2() = 
@@ -211,10 +165,23 @@ open System.Runtime.Serialization
         ()
 
     let part1() = 
-        let input = readLinesFromFile(@"day7.txt")
-        ()
+        let input = readLinesFromFile(@"day9.txt")
+        input
+        |> Seq.map parseLine
+        |> Seq.toList
+        |> List.map (fun (players, maxPoints) ->
+            let {Scores= score} = advance (newGame (int64 players)) (int64 maxPoints)
+            score |> Map.toSeq |> Seq.map snd |> Seq.max
+        )
 
 
     let part2() = 
-        let input = readLinesFromFile(@"day7.txt")
-        ()
+        let input = readLinesFromFile(@"day9.txt")
+        input
+        |> Seq.map parseLine
+        |> Seq.toList
+        |> List.map (fun (players, maxPoints) ->
+            let newMax = 100L * (int64 maxPoints)
+            let {Scores= score} = advance (newGame (int64 players)) newMax
+            score |> Map.toSeq |> Seq.map snd |> Seq.max
+        )
