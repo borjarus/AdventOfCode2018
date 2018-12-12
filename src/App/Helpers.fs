@@ -49,6 +49,12 @@ let cycle (lst:'a list) =
         }
     next()
 
+let rec transpose mx =
+    match mx with
+    | [] :: _ -> []
+    | _ -> (List.map List.head mx) :: (transpose (List.map List.tail mx))
+
+
 module String =
     let trim (s: string) = s.Trim()
     let split (sep: string) (s: string) = (s.Split([| sep |], StringSplitOptions.None)) |> Array.toList
