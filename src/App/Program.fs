@@ -15,6 +15,9 @@
                                     | "9" -> sprintf "%A" <| Day9.part2()
                                     | "10" -> sprintf "%A" <| Day10.part2()
                                     | "11" -> sprintf "%A" <| Day11.part2()
+
+                                    | "13" -> sprintf "%A" <| Day13.example1()
+
                                     | _ -> ""
                     | _ -> "Insert number of day as parameter" 
         printfn "%s" out
