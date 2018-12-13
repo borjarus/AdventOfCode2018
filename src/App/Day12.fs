@@ -87,24 +87,114 @@ after the 20th generation produces 325.
 
 After 20 generations, what is the sum of the numbers of all pots which contain a plant?
 
+--- Part Two ---
+You realize that 20 generations aren't enough. After all, these plants will need to 
+last another 1500 years to even reach your timeline, not to mention your future.
+
+After fifty billion (50000000000) generations, what is the sum of the numbers of all pots which contain a plant?
+
 *)
 
 module App.Day12
 open Helpers
+    
+    type Pot = Empty | Plant
+        with static member FromChar = function '.' -> Empty | '#' -> Plant | _ -> failwith "Invalid pot"
+
+    type Rule = Rule of (Pot * Pot * Pot * Pot * Pot) * Pot
+        with
+            static member Pattern (Rule (p, _)) = p
+            static member Result (Rule (_,r)) = r
+    
+    let parseLineOfPot lines =
+        Seq.head lines
+        |> function 
+            Regex  @"initial state: ([.#]+)" [p] -> p |> Seq.map Pot.FromChar 
+            | _ -> failwith "parse error"
+        |> Seq.indexed
+        |> Map.ofSeq
+
+    let parseRules lines =  
+        lines 
+        |> Seq.skip 2
+        |> Seq.map (function 
+            | Regex @"([.#]+) => ([.#])" [p; r] -> 
+                let l1::l2::c::r1::r2::_ = (Seq.toList p |> List.map Pot.FromChar)
+                Rule ((l1,l2,c,r1,r2), Pot.FromChar (Seq.head r))
+            | _ -> failwith "parse error"
+        )
+        |> Seq.toList
+   
+    let iterateGenerations rules pots =
+        let getFromPotline i = pots |> Map.tryFind i |> Option.defaultValue Empty
+
+        let min = (pots |> Map.toList |> List.minBy fst |> fst) - 2
+        let max = (pots |> Map.toList |> List.maxBy fst |> fst) + 2
+
+        [min .. max]
+        |> List.map (fun i ->
+            i,
+            let (_,_,pot,_,_) as l = getFromPotline (i - 2), getFromPotline (i - 1), getFromPotline i, getFromPotline (i + 1), getFromPotline (i + 2)
+            rules
+            |> List.tryFind (Rule.Pattern >> ((=) l))
+            |> Option.map Rule.Result
+            |> Option.defaultValue pot
+        )
+        |> Map.ofList
+
+    let sumPlants pots =
+        pots
+        |> Map.toList
+        |> List.filter (snd >> ((=) Pot.Plant))
+        |> List.sumBy fst
+
 
     let examples1() =        
-        let input =  int ""
-        ()
+        let input = parseLines  @"initial state: #..#.#..##......###...###\n
+\n
+...## => #\n
+..#.. => #\n
+.#... => #\n
+.#.#. => #\n
+.#.## => #\n
+.##.. => #\n
+.#### => #\n
+#.#.# => #\n
+#.### => #\n
+##.#. => #\n
+##.## => #\n
+###.. => #\n
+###.# => #\n
+####. => #"
+        let pots = parseLineOfPot input
+        let rules = parseRules input
+        [1..20]
+        |> List.fold (fun p _ -> iterateGenerations rules p) pots
+        |> sumPlants
 
-    let examples2() =        
-        let input =  int ""
-        ()
         
     let part1() =        
-        let input =  int ""
-        ()
+        let input = readLinesFromFile(@"day12.txt")
+        let pots = parseLineOfPot input
+        let rules = parseRules input
+        [1..20]
+        |> List.fold (fun p _ -> iterateGenerations rules p) pots
+        |> sumPlants
 
 
     let part2() = 
-        let input =  int ""
-        ()
+        let input = readLinesFromFile(@"day12.txt")
+        let pots = parseLineOfPot input
+        let rules = parseRules input
+        {1L..50000000000L}
+        |> Seq.scan (fun p _ -> iterateGenerations rules p) pots
+        |> Seq.windowed 3
+        |> Seq.indexed
+            |> Seq.find (fun (i, w) ->
+                let s1, s2, s3 = sumPlants w.[0], sumPlants w.[1], sumPlants w.[2]
+                (s2-s1) = (s3-s2)
+            )
+        |> (fun (i, w)->
+                let diff = (sumPlants w.[1]) - (sumPlants w.[0]) |> uint64
+                diff * (50000000000UL / ((uint64 i) + 1UL))
+        )
