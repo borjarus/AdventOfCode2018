@@ -173,6 +173,49 @@ the location of the first crash. Locations are given in X,Y coordinates, where t
 
 In this example, the location of the first crash is 7,3.
 
+--- Part Two ---
+There isn't much you can do to prevent crashes in this ridiculous system. However, by predicting the crashes, 
+the Elves know where to be in advance and instantly remove the two crashing carts the moment any crash occurs.
+
+They can proceed like this for a while, but eventually, they're going to run out of carts. It could be useful 
+to figure out where the last cart that hasn't crashed will end up.
+
+For example:
+
+/>-<\  
+|   |  
+| /<+-\
+| | | v
+\>+</ |
+  |   ^
+  \<->/
+
+/---\  
+|   |  
+| v-+-\
+| | | |
+\-+-/ |
+  |   |
+  ^---^
+
+/---\  
+|   |  
+| /-+-\
+| v | |
+\-+-/ |
+  ^   ^
+  \---/
+
+/---\  
+|   |  
+| /-+-\
+| | | |
+\-+-/ ^
+  |   |
+  \---/
+After four very expensive crashes, a tick ends with only one cart remaining; its final location is 6,4.
+
+What is the location of the last cart at the end of the first tick where it is the only cart left?
 
 *)
 
@@ -197,11 +240,12 @@ open Helpers
 
     let extractCarts tracks = 
         let grid = tracks |> array2D
+        
 
         let carts = seq {
             for y = 0 to (grid.GetLength 0) - 1 do 
                 for x = 0 to (grid.GetLength 1) - 1 do
-                    match grid.[x,y] with
+                    match grid.[y,x] with
                     | '^' -> yield Cart.New x y 0 -1
                     | 'v' -> yield Cart.New x y 0 1
                     | '<' -> yield Cart.New x y -1 0
@@ -212,7 +256,7 @@ open Helpers
         let cartToTrackType =
             function 
             | '^' | 'v' | '|' -> Vertical
-            | '<' | '>' | '-' -> Horizontal
+            | '>' | '<' | '-' -> Horizontal
             | '+' -> Intersection
             | '/' -> ForwardCurve
             | '\\' -> BackCurve
@@ -225,7 +269,7 @@ open Helpers
     let tickCart (grid: TrackTypes[,]) cart =
         let newX, newY = cart.x + cart.xDir, cart.y + cart.yDir
         let cartInNewPosition = {cart with x= newX; y= newY}
-        match grid.[newX,newY] with
+        match grid.[newY,newX] with
         | Vertical | Horizontal -> cartInNewPosition
         | ForwardCurve -> {cartInNewPosition with xDir=(-cart.yDir); yDir=(-cart.xDir)}
         | BackCurve -> {cartInNewPosition with xDir=cart.yDir; yDir=cart.xDir}
@@ -261,26 +305,72 @@ open Helpers
         let updatedCarts = trackLogs.carts |> Map.add cartID newCart
         {cartLocations= updatedLocations; carts= updatedCarts; collisions= trackLogs.collisions}
     
+    let applyNewTicketCart trackLogs oldCart newCart cartID =
+        if Map.containsKey (Cart.GetPosition newCart) trackLogs.cartLocations 
+        then handleCollision trackLogs oldCart newCart cartID 
+        else handleNoCollision trackLogs oldCart newCart cartID 
 
+    let tick grid trackLogs =
+        let rec processCarts trackLogs carts =
+            match carts with 
+            | [] -> trackLogs
+            | (i, cart) :: carts -> 
+                if Map.containsKey i trackLogs.carts 
+                then 
+                    let tickedCart = tickCart grid cart
+                    let newTrackState = applyNewTicketCart trackLogs cart tickedCart i
+                    processCarts newTrackState carts
+                else 
+                    processCarts trackLogs carts
+        
+        trackLogs.carts
+        //|> Map.toSeq
+        //|> Seq.toList
+        |> Map.toList
+        |> List.sortBy (fun (_,cart) -> (cart.y, cart.x))
+        |> processCarts trackLogs
+  
 
+    let buildTrackLogs carts = 
+        let indexedCarts = carts |> Seq.mapi (fun i cart -> (i, cart))
+        let locationMap = indexedCarts |> Seq.map (fun (i,cart) -> (cart.x, cart.y), i) |> Map.ofSeq
+        let cartMap = indexedCarts |> Map.ofSeq
+        {cartLocations= locationMap; carts= cartMap; collisions=[]}
 
-
-
+    let solve1 grid =
+        let rec getFirstCollision trackLogs =
+            let nextState = tick grid trackLogs
+            if List.isEmpty nextState.collisions
+            then getFirstCollision nextState
+            else List.last nextState.collisions
+        getFirstCollision
+    
+    let solve2 grid =
+        let rec getLastCarLocation trackLogs =
+            let nextState = tick grid trackLogs
+            if Map.count nextState.carts > 1 
+            then getLastCarLocation nextState
+            else nextState.cartLocations |> Map.toSeq |> Seq.head |> fst
+        getLastCarLocation
 
     let examples1() =
-        let input = parseLines ""
-        ()
+        let input = readLinesFromFile(@"day13_1.txt")
+        let grid, carts = extractCarts input 
 
-    let examples2() =
-        let input = parseLines ""
-        ()
+        buildTrackLogs carts |> solve1 grid
 
 
     let part1() =        
         let input = readLinesFromFile(@"day13.txt")
-        ()
+        let grid, carts = extractCarts input 
+
+        buildTrackLogs carts |> solve1 grid
+       
+
 
 
     let part2() = 
         let input = readLinesFromFile(@"day13.txt")
-        ()
+        let grid, carts = extractCarts input 
+
+        buildTrackLogs carts |> solve2 grid
