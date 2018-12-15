@@ -57,23 +57,114 @@ After 18 recipes, the scores of the next ten would be 9251071085.
 After 2018 recipes, the scores of the next ten would be 5941429882.
 What are the scores of the ten recipes immediately after the number of recipes in your puzzle input?
 
+--- Part Two ---
+
+As it turns out, you got the Elves' plan backwards. They actually want to know how many recipes appear on the scoreboard to the 
+left of the first recipes whose scores are the digits from your puzzle input.
+
+    51589 first appears after 9 recipes.
+    01245 first appears after 5 recipes.
+    92510 first appears after 18 recipes.
+    59414 first appears after 2018 recipes.
+
+How many recipes appear on the scoreboard to the left of the score sequence in your puzzle input?
+
+
 *)
 
 module App.Day14
 open Helpers
- 
+open System
 
-    let examples1() =
-    let input =  ""
-    ()
+    type Buffer = int * int * int * int * int * int
 
 
-let part1() =        
-    let input = "765071"
-    ()
+    type Scores = {t: Buffer; score: Buffer; bufCount: int; matched: bool}
+        with 
+            static member Push (_, i2, i3, i4, i5, i6) inp = (i2, i3, i4, i5, i6, inp)
+            static member Empty = (0,0,0,0,0,0)
+
+    type Elves = {e1: int; e2: int; score: int[]; scoreAdded: int list; numOfScores: int}
+        with 
+            static member GetElfIndex elf elves = if elf = 1 then elves.e1 else elves.e2
+            static member SetElfIndex elf elves index = 
+                if elf = 1
+                then {elves with e1 = index}
+                else {elves with e2 = index}
+            static member GetScore elf elves = elves.score.[Elves.GetElfIndex elf elves]
+
+    
+
+    let getNewScores elves =
+        let total = (Elves.GetScore 1 elves) + (Elves.GetScore 2 elves)
+        let scoreModList = [total % 10]
+        if total >= 10 
+        then (total / 10) :: scoreModList
+        else scoreModList
+    
+    let updateScores elves = 
+        let nScores = getNewScores elves
+        let aScores = List.fold (fun acc el -> el :: acc) elves.scoreAdded nScores
+        let nsCount = elves.numOfScores + List.length nScores
+        {elves with scoreAdded= aScores; numOfScores= nsCount}
+
+    let addQueuedScores elves =
+        let nScores = elves.scoreAdded |> List.toArray |> Array.rev
+        {elves with score= Array.append elves.score nScores; scoreAdded= []}
+        
+    let rec move elf elves =
+        let lScores = Array.length elves.score
+        let score = Elves.GetElfIndex elf elves + Elves.GetScore elf elves + 1
+        if score < lScores || elves.scoreAdded = [] 
+        then (score % lScores) |> Elves.SetElfIndex elf elves 
+        else elves |> addQueuedScores |> move elf
+    
+    let  step = updateScores >> move 1 >> move 2
+
+    let startRecord = {e1= 0; e2= 1; score= [| 3; 7 |]; scoreAdded= []; numOfScores= 2 }
 
 
 
-let part2() = 
-    let input =  ""
-    ()
+    let addScore buf inp =
+        if buf.matched 
+        then buf
+        else 
+            let nBuff = Scores.Push buf.score inp
+            let isTargetedBuff = buf.t = nBuff
+            {buf with score= nBuff; bufCount= buf.bufCount + 1; matched= isTargetedBuff}
+    
+    let startBuffer t scores =
+        List.fold addScore {t= t; score= Scores.Empty; bufCount= (-6); matched= false} scores
+
+    let targetStrToBuffer =
+        Seq.map (fun c -> int c - int '0')
+        >> Seq.fold Scores.Push Scores.Empty
+         
+
+
+    let part1() =        
+        let input = int "765071"
+        let rec generate elves =
+            if elves.numOfScores = input + 10
+            then 
+                let appened = addQueuedScores elves
+                let ch = 
+                    Array.sub appened.score input 10
+                    |> Array.map (fun c -> char (c + int '0'))
+                String ch
+            else elves |> step |> generate
+    
+        generate startRecord
+
+
+    let part2() = 
+        let input = "765071"
+        let rec generate elves buf =
+            let nScoreBuff = getNewScores elves |> List.fold addScore buf
+            if nScoreBuff.matched 
+            then nScoreBuff.bufCount
+            else generate (step elves) nScoreBuff
+        let target = targetStrToBuffer input
+        let buf = startBuffer target [3; 7]
+        generate startRecord buf
+            
