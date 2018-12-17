@@ -314,17 +314,295 @@ Outcome: 20 * 937 = 18740
 
 What is the outcome of the combat described in your puzzle input?
 
+
+--- Part Two ---
+According to your calculations, the Elves are going to lose badly. Surely, you won't mess up the timeline 
+too much if you give them just a little advanced technology, right?
+
+You need to make sure the Elves not only win, but also suffer no losses: even the death of a single Elf is unacceptable.
+
+However, you can't go too far: larger changes will be more likely to permanently alter spacetime.
+
+So, you need to find the outcome of the battle in which the Elves have the lowest integer attack power (at least 4) 
+that allows them to win without a single death. The Goblins always have an attack power of 3.
+
+In the first summarized example above, the lowest attack power the Elves need to win without losses is 15:
+
+#######       #######
+#.G...#       #..E..#   E(158)
+#...EG#       #...E.#   E(14)
+#.#.#G#  -->  #.#.#.#
+#..G#E#       #...#.#
+#.....#       #.....#
+#######       #######
+
+Combat ends after 29 full rounds
+Elves win with 172 total hit points left
+Outcome: 29 * 172 = 4988
+In the second example above, the Elves need only 4 attack power:
+
+#######       #######
+#E..EG#       #.E.E.#   E(200), E(23)
+#.#G.E#       #.#E..#   E(200)
+#E.##E#  -->  #E.##E#   E(125), E(200)
+#G..#.#       #.E.#.#   E(200)
+#..E#.#       #...#.#
+#######       #######
+
+Combat ends after 33 full rounds
+Elves win with 948 total hit points left
+Outcome: 33 * 948 = 31284
+In the third example above, the Elves need 15 attack power:
+
+#######       #######
+#E.G#.#       #.E.#.#   E(8)
+#.#G..#       #.#E..#   E(86)
+#G.#.G#  -->  #..#..#
+#G..#.#       #...#.#
+#...E.#       #.....#
+#######       #######
+
+Combat ends after 37 full rounds
+Elves win with 94 total hit points left
+Outcome: 37 * 94 = 3478
+In the fourth example above, the Elves need 12 attack power:
+
+#######       #######
+#.E...#       #...E.#   E(14)
+#.#..G#       #.#..E#   E(152)
+#.###.#  -->  #.###.#
+#E#G#G#       #.#.#.#
+#...#G#       #...#.#
+#######       #######
+
+Combat ends after 39 full rounds
+Elves win with 166 total hit points left
+Outcome: 39 * 166 = 6474
+In the last example above, the lone Elf needs 34 attack power:
+
+#########       #########   
+#G......#       #.......#   
+#.E.#...#       #.E.#...#   E(38)
+#..##..G#       #..##...#   
+#...##..#  -->  #...##..#   
+#...#...#       #...#...#   
+#.G...G.#       #.......#   
+#.....G.#       #.......#   
+#########       #########   
+
+Combat ends after 30 full rounds
+Elves win with 38 total hit points left
+Outcome: 30 * 38 = 1140
+After increasing the Elves' attack power until it is just barely enough for them to win without any Elves dying, 
+what is the outcome of the combat described in your puzzle input?
+
+
+
 *)
 
 module App.Day15
 open Helpers
 
+    type UnitType = Goblin | Elf
+    type CaveCell = Wall | Open
+    type Unit = {Type: UnitType; HP: int; Damage: int; Position: int * int }
+        with
+            static member New utype x y d = {Type= utype; HP= 200; Damage= d; Position= x,y}
+    
+    type CaveStatus = {
+        Units: Map<int, Unit>;
+        Locations: Map<int * int, int>
+        Round: int
+        EndedAtEndofRound: bool
+        Ended: bool
+        ElfDied: bool
+    }
+    with 
+        static member New units =
+            let unitIndexes = Seq.mapi (fun i x -> (i,x)) units
+            let unitMap = unitIndexes |> Map.ofSeq
+            let loc = unitIndexes |> Seq.map (fun (i,x) -> (x.Position, i)) |> Map.ofSeq
+            {Units= unitMap; Locations= loc; Round= 0; EndedAtEndofRound= false; Ended= false; ElfDied= false}
+        static member ResetEndedAtEndofRound status = {status with EndedAtEndofRound=false}
+        static member UpdateRound status =
+            if not status.Ended || status.EndedAtEndofRound
+            then {status with Round= status.Round + 1}
+            else status
+        static member UpdateEndState status =
+            let remainingTypes =
+                status.Units
+                |> Map.toSeq
+                |> Seq.map (fun (_,x) -> x.Type)
+                |> Set.ofSeq
+            if Set.count remainingTypes = 1 
+            then {status with EndedAtEndofRound= true; Ended= true}
+            else status
+        static member GetOutcome status = 
+            let sumOfHP = status.Units |> Map.toSeq |> Seq.sumBy (fun (_, u) -> u.HP)
+            status.Round * sumOfHP
+
+    let parseUnits damage cave =
+        let grid = cave |> array2D
+
+        let unitsGenerate = 
+            seq {
+                for y = 0 to (grid.GetLength 0) - 1 do
+                    for x = 0 to (grid.GetLength 1) - 1 do
+                        match grid.[y,x] with 
+                        | 'G' -> yield Unit.New Goblin x y 3
+                        | 'E' -> yield Unit.New Elf x y damage
+                        | _ -> ()
+            }
+        
+        let parseToCell =
+            function
+            | 'G' | 'E' | '.' -> Open
+            | '#' -> Wall 
+            | c -> failwithf "Invalid char %c" c
+        
+        let parsedGrid = grid |> Array2D.map parseToCell
+        parsedGrid, unitsGenerate
+
+    let neightbours (x,y) = [(x, y - 1); (x - 1, y); (x + 1, y); (x, y + 1)]
+    let openNeightbour (grid: CaveCell[,]) = neightbours >> List.filter (fun (x,y) -> grid.[y,x] = Open)
+
+    let transposeCell (x,y) = (y,x)
+
+    let generatingSteps grid source targets excludedNodes =
+        let rec bfs seen nextLevel =
+            let nextLvlNodes = nextLevel |> Set.map snd
+            let intersect = Set.intersect targets nextLvlNodes
+            if Set.isEmpty intersect 
+            then
+                let newSeen = Set.union seen nextLvlNodes
+                let processNode nxtLevel (s,n) =
+                    openNeightbour grid n
+                    |> List.filter (fun x -> Set.contains x newSeen |> not)
+                    |> List.fold (fun acc el -> (s, el) :: acc) nxtLevel
+                let nextLevel =
+                    nextLevel
+                    |> Set.toList
+                    |> List.fold processNode []
+                    |> Set.ofList
+                
+                if Set.isEmpty nextLevel 
+                then source
+                else bfs newSeen nextLevel
+            else
+                let closestTarg = intersect |> Seq.minBy transposeCell
+                nextLevel
+                |> Seq.filter (fun x -> snd x = closestTarg)
+                |> Seq.map fst
+                |> Seq.minBy transposeCell
+        
+        let initSeen = excludedNodes |> Set.add source
+        let firstLvl =
+            Set.difference (openNeightbour grid source |> Set.ofList) excludedNodes
+            |> Set.map (fun x -> (x,x))
+        bfs initSeen firstLvl
+
+    let nearbyEnemies grid unit status =
+        openNeightbour grid unit.Position
+        |> List.choose (fun x -> Map.tryFind x status.Locations)
+        |> List.choose (fun x -> Map.tryFind x status.Units)
+        |> List.filter (fun x -> x.Type <> unit.Type)
+    
+    let moveToclosestTarget grid i unit status =
+        let otherUnits = 
+            status.Units
+            |> Map.toSeq
+            |> Seq.filter (fun (i',_) -> i' <> i)
+            |> Seq.map snd
+        let excludeNodes =
+            otherUnits
+            |> Seq.map (fun x -> x.Position)
+            |> Set.ofSeq
+        let targets = 
+            otherUnits
+            |> Seq.filter (fun x -> x.Type <> unit.Type)
+            |> Seq.collect(fun x -> openNeightbour grid x.Position)
+            |> Set.ofSeq
+        let filteredTargets = Set.difference targets excludeNodes
+        let nextPos = generatingSteps grid unit.Position filteredTargets excludeNodes
+        let newUnits = status.Units |> Map.add i {unit with Position= nextPos}
+        let newLoc = 
+            status.Locations
+            |> Map.remove unit.Position
+            |> Map.add nextPos i
+        {status with Locations= newLoc; Units= newUnits}
+
+    let tryMoveToClosestTarget grid i status =
+        match Map.tryFind i status.Units with
+        | Some u -> 
+            let shouldMove = List.isEmpty (nearbyEnemies grid u status)
+            if shouldMove 
+            then moveToclosestTarget grid i u status
+            else status
+        | None -> status
+    
+
+            
+    let attackWeakestEnemy status unit enemies =
+        let weakest = List.minBy (fun x -> x.HP, transposeCell x.Position) enemies
+        let weakestIndex = Map.find weakest.Position status.Locations
+        let newHP = weakest.HP - unit.Damage
+        if newHP <= 0
+        then 
+            let newLoc = status.Locations |> Map.remove weakest.Position
+            let newUnits = status.Units |> Map.remove weakestIndex
+            let elfDied = status.ElfDied || weakest.Type = Elf
+            {status with Locations= newLoc; Units= newUnits; ElfDied= elfDied} |> CaveStatus.UpdateEndState
+        else 
+            let damageWeakest = {weakest with HP= weakest.HP - unit.Damage}
+            let newUnits = status.Units |> Map.add weakestIndex damageWeakest
+            {status with Units= newUnits}
+
+    
+
+    let tryAttackWeakestEnemy grid i status =
+        match Map.tryFind i status.Units with
+        | Some u ->
+            let enemies = nearbyEnemies grid u status
+            if List.isEmpty enemies
+            then status
+            else attackWeakestEnemy status u enemies
+        | None -> status
+
+
+    let performAction grid i =
+        CaveStatus.ResetEndedAtEndofRound
+        >> tryMoveToClosestTarget grid i 
+        >> tryAttackWeakestEnemy grid i
+
+    let performRound grid status =
+        status.Units
+        |> Map.toSeq
+        |> Seq.sortBy (fun (_,u) -> transposeCell u.Position)
+        |> Seq.fold (fun s (i,_) -> performAction grid i s) status
+        |> CaveStatus.UpdateRound
+
+    
+    let getScore elfDamage stopAtElfDeath gridLines =
+        let grid, units = parseUnits elfDamage gridLines
+        let rec loop status =
+            let nextState = performRound grid status
+            if nextState.ElfDied && stopAtElfDeath
+            then false, 0
+            elif nextState.Ended
+            then true, (CaveStatus.GetOutcome nextState)
+            else loop nextState
+        CaveStatus.New units |> loop
+
 
     let part1() =        
-        let input = readLinesFromFile(@"day15.txt")
-        ()
+        readLinesFromFile(@"day15.txt")
+        |> getScore 3 false |> snd
 
 
     let part2() = 
         let input = readLinesFromFile(@"day15.txt")
-        ()
+
+        Seq.initInfinite (fun i -> getScore (i + 4) true input)
+        |> Seq.skipWhile (fun (x, _) -> not x)
+        |> Seq.head
+        |> snd
