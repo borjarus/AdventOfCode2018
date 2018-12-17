@@ -84,6 +84,36 @@ Ignoring the opcode numbers, how many samples in your puzzle input behave like t
 module App.Day16
 open Helpers
 
+    type Registers = int * int * int * int
+    type Instructions = {OpCode: int; Args: int * int * int}
+    type Line = Registers | Instructions
+    
+    let get i ((r1,r2,r3,r4): Registers) =
+        match i with
+        | 0 -> r1
+        | 1 -> r2
+        | 2 -> r3
+        | 3 -> r4
+        | _ -> failwith "error invalid register"
+
+    let set i v ((r1,r2,r3,r4): Registers) =
+        match i with
+        | 0 -> (v,r2,r3,r4)
+        | 1 -> (r1,v,r3,r4)
+        | 2 -> (r1,r2,v,r4)
+        | 3 -> (r1,r2,r3,v)
+        | _ -> failwith "error invalid register"
+
+
+    let parseInput (l: string )    =
+        match l with 
+        | Regex @"Before: [(\d+), (\d+), (\d+), (\d+)]" [r1; r2; r3; r4] -> (int r1, int r2,int r3, int r4)
+        | Regex @"After: [(\d+), (\d+), (\d+), (\d+)]" [r1; r2; r3; r4] -> (int r1, int r2,int r3, int r4)
+        | Regex @"(\d+) (\d+) (\d+) (\d+)" [code; i1; i2; i3] -> {OpCode= int code; Args= (int i1,int i2, int i3)}
+ 
+
+
+
 
     let part1() =        
         let input = readLinesFromFile(@"day16.txt")
