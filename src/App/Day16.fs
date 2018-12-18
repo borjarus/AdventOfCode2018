@@ -79,47 +79,169 @@ You collect many of these samples (the first section of your puzzle input). The 
 
 Ignoring the opcode numbers, how many samples in your puzzle input behave like three or more opcodes?
 
+--- Part Two ---
+Using the samples you collected, work out the number of each opcode and execute the test program 
+(the second section of your puzzle input).
+
+What value is contained in register 0 after executing the test program?
+
 *)
 
 module App.Day16
 open Helpers
 
     type Registers = int * int * int * int
-    type Instructions = {OpCode: int; Args: int * int * int}
-    type Line = Registers | Instructions
+    type InstructionsType = {OpCode: int; Args: int * int * int}
+    type InstructionHandler = int * int * int -> Registers -> Registers
+    type Sample = Registers * InstructionsType * Registers
+
+    type Instructions() as x =
+        let get i ((r1,r2,r3,r4): Registers) =
+            match i with
+            | 0 -> r1
+            | 1 -> r2
+            | 2 -> r3
+            | 3 -> r4
+            | _ -> failwith "error invalid register"
+
+        let set i v ((r1,r2,r3,r4): Registers) =
+            match i with
+            | 0 -> (v,r2,r3,r4)
+            | 1 -> (r1,v,r3,r4)
+            | 2 -> (r1,r2,v,r4)
+            | 3 -> (r1,r2,r3,v)
+            | _ -> failwith "error invalid register"
+
+        let useFirst a _ = a
+        let gt a b = if a > b then 1 else 0 
+        let eq a b = if a = b then 1 else 0
+
+        member x.Get i = get i
+        
+        member x.Inst f v1 v2 c = set c (f v1 v2)
+        member x.Instir f (a,b,c) regs = x.Inst f a (get b regs) c regs
+        member x.Instri f (a,b,c) regs = x.Inst f (get a regs) b c regs
+        member x.Instrr f (a,b,c) regs = x.Inst f (get a regs) (get b regs) c regs
+
+        member x.Addr = x.Instrr (+)
+        member x.Addi = x.Instri (+)
+        member x.Mulr = x.Instrr (*)
+        member x.Muli = x.Instri (*)
+        member x.Banr = x.Instrr (&&&)
+        member x.Bani = x.Instri (&&&)
+        member x.Borr = x.Instrr (|||)
+        member x.Bori = x.Instri (|||)
+        member x.Setr = x.Instri useFirst
+        member x.Seti = x.Instir useFirst
+        member x.Gtir = x.Instir gt
+        member x.Gtri = x.Instri gt
+        member x.Gtrr = x.Instrr gt
+        member x.Eqir = x.Instir eq
+        member x.Eqri = x.Instri eq
+        member x.Eqrr = x.Instrr eq
+
+    let parseInput inp =
+        let parseRegisters (l: string ) =
+            match l with 
+            | Regex @"Before: \[(\d+), (\d+), (\d+), (\d+)\]" [r1; r2; r3; r4] -> (int r1, int r2,int r3, int r4)
+            | Regex @"After:  \[(\d+), (\d+), (\d+), (\d+)\]" [r1; r2; r3; r4] -> (int r1, int r2,int r3, int r4)
+            | _ -> failwith "parse error"
+
+
+        let parseInstructions (l: string) =
+            match l with 
+            | Regex @"(\d+) (\d+) (\d+) (\d+)" [code; i1; i2; i3] -> {OpCode= int code; Args= (int i1,int i2, int i3)}
+            | _ -> failwith "parse error"
+        
+        let parseSample  l1 l2 l3 : Sample =
+            let b = parseRegisters l1
+            let i = parseInstructions l2
+            let a = parseRegisters l3
+            b, i, a
+        
+        let lineList = inp |> Seq.toList
+
+        let rec getSamples l samples = 
+            match l with 
+            | b :: i :: a :: _ :: nxt :: rst -> 
+                let sample = parseSample b i a
+                if nxt = ""
+                then sample :: samples, rst
+                else getSamples (nxt::rst) (sample::samples)
+            | _ -> failwith "unexpected EOL"
+        let samples, linesAfter = getSamples lineList []
+        let instructions = List.map parseInstructions (List.tail linesAfter)
+        samples, instructions
+
+    let instructions: InstructionHandler[] =
+        let x = Instructions()
+        [|x.Addr; x.Addi; x.Mulr; x.Muli; x.Banr; x.Bani; x.Borr; x.Bori
+          x.Setr; x.Seti; x.Gtir; x.Gtri; x.Gtrr; x.Eqir; x.Eqri; x.Eqrr |]
     
-    let get i ((r1,r2,r3,r4): Registers) =
-        match i with
-        | 0 -> r1
-        | 1 -> r2
-        | 2 -> r3
-        | 3 -> r4
-        | _ -> failwith "error invalid register"
+    let couldBeInstruction (b, {Args= args}, a) inst = inst args b = a
+    let couldBeThreeOrMoreInstructions sample =
+        let potentials = instructions |> Array.filter (couldBeInstruction sample)
+        Array.length potentials >= 3
 
-    let set i v ((r1,r2,r3,r4): Registers) =
-        match i with
-        | 0 -> (v,r2,r3,r4)
-        | 1 -> (r1,v,r3,r4)
-        | 2 -> (r1,r2,v,r4)
-        | 3 -> (r1,r2,r3,v)
-        | _ -> failwith "error invalid register"
+    let allCanBeInstruction samples inst =
+        samples 
+        |> List.exists (fun sample -> not <| couldBeInstruction sample inst)
+        |> not
+    
+    let possibleInstructions samples =
+        instructions
+        |> Array.mapi (fun i v -> (i,v))
+        |> Array.filter (snd >> allCanBeInstruction samples)
+        |> Array.map fst
+        |> Set.ofArray
+    
+    let getAllPosibleOpMappings =
+        List.groupBy (fun (_,i,_) -> i.OpCode)
+        >> List.sortBy fst 
+        >> List.map (snd >> possibleInstructions)
+    
+    let getOpMapping samples =
+        let possibleOpMappings = getAllPosibleOpMappings samples
+        let rec findMapping mapping seen =
+            function 
+            | func :: xs ->
+                let choices = Set.difference func seen |> Seq.toList
+                let rec findChoice =
+                    function
+                    | [] -> false, []
+                    | x' :: xs' ->
+                        let isFound , mapping = findMapping (x'::mapping) (Set.add x' seen) xs
+                        if isFound 
+                        then true, mapping
+                        else findChoice xs'
+                findChoice choices
+            | [] -> true, mapping
 
+        findMapping [] Set.empty possibleOpMappings
+        |> snd
+        |> List.rev
+        |> List.toArray
+        |> Array.map (fun x -> instructions.[x])
 
-    let parseInput (l: string )    =
-        match l with 
-        | Regex @"Before: [(\d+), (\d+), (\d+), (\d+)]" [r1; r2; r3; r4] -> (int r1, int r2,int r3, int r4)
-        | Regex @"After: [(\d+), (\d+), (\d+), (\d+)]" [r1; r2; r3; r4] -> (int r1, int r2,int r3, int r4)
-        | Regex @"(\d+) (\d+) (\d+) (\d+)" [code; i1; i2; i3] -> {OpCode= int code; Args= (int i1,int i2, int i3)}
- 
 
 
 
 
     let part1() =        
-        let input = readLinesFromFile(@"day16.txt")
-        ()
+        let samples, _ = readLinesFromFile(@"day16.txt") |> parseInput
+        samples
+        |> List.filter couldBeThreeOrMoreInstructions
+        |> List.length
+        
+
 
 
     let part2() = 
-        let input = readLinesFromFile(@"day16.txt")
-        ()
+        let samples,instr = readLinesFromFile(@"day16.txt") |> parseInput
+        let x = Instructions()
+        let ops = getOpMapping samples
+        let applyInstr reg instr =
+            let i = ops.[instr.OpCode]
+            i instr.Args reg
+        List.fold applyInstr (0,0,0,0) instr |> x.Get 0
+        
