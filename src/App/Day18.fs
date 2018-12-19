@@ -225,6 +225,16 @@ open Helpers
     
     let stepN n grid = Seq.init n id |> Seq.fold (fun x _ -> step x) grid 
 
+    let generateANswer inp =
+        let rec stepRec x grid cache =
+            match Map.tryFind grid cache with
+            | Some n -> 
+                let cycleLen = x - n
+                let howManySteps = (1000000000 - n) % cycleLen
+                grid |> stepN howManySteps |> score
+            | None -> stepRec (x + 1) (step grid) (Map.add grid x cache)
+        stepRec 0 inp Map.empty
+
 
     let part1() =        
        readLinesFromFile(@"day18.txt") 
@@ -235,5 +245,9 @@ open Helpers
 
 
     let part2() = 
-        readLinesFromFile(@"day18.txt")
+            readLinesFromFile(@"day18.txt")
+            |> parseInput
+            |> generateANswer
+
+        
 
