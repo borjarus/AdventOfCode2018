@@ -68,22 +68,103 @@ The instruction pointer is 6, so the instruction seti 9 0 5 stores 9 into regist
 causing it to point outside the program, and so the program ends.
 What value is left in register 0 when the background process halts?
 
+--- Part Two ---
+A new background process immediately spins up in its place. It appears identical, but on closer inspection, 
+you notice that this time, register 0 started with the value 1.
+
+What value is left in register 0 when this new background process halts?
+
 *)
 
 module App.Day19
 open Helpers
   
+    type Instruction = string * int * int * int
 
+    
+
+    let parseInput inp =
+        let parseLine  inp' : Instruction =
+            match inp' with 
+            | Regex @"([a-z]+) (\d+) (\d+) (\d+)" [f; d1; d2; d3] -> (f, int d1, int d2, int d3)
+            | _ -> failwith "parse error"
+
+        let l = inp |> Seq.toList
+
+        let ip = match Seq.head inp with
+            | Regex @"(\d+)" [ip] -> int ip
+            | _ -> failwith "parse error"
+        
+        let parsedLines = inp |> Seq.tail |> Seq.map parseLine |> Seq.toArray
+        (parsedLines, ip)
+
+    let exec (p: Instruction[]) reg ip s =
+        let bool2Int = function true -> 1 | false -> 0
+        let rec loop (reg':int[]) ip' =
+            match s reg' with 
+            | Some x -> x
+            | None -> 
+                reg'.[ip] <- ip'
+                match p.[ip'] with
+                | ("addr", r1, r2, r3) -> reg'.[r3] <- reg'.[r1] + reg'.[r2]
+                | ("addi", r1, r2, r3) -> reg'.[r3] <- reg'.[r1] + r2
+                | ("mulr", r1, r2, r3) -> reg'.[r3] <- reg'.[r1] * reg'.[r2]
+                | ("muli", r1, r2, r3) -> reg'.[r3] <- reg'.[r1] * r2
+                | ("banr", r1, r2, r3) -> reg'.[r3] <- reg'.[r1] &&& reg'.[r2]
+                | ("bani", r1, r2, r3) -> reg'.[r3] <- reg'.[r1] &&& r2
+                | ("borr", r1, r2, r3) -> reg'.[r3] <- reg'.[r1] ||| reg'.[r2]
+                | ("bori", r1, r2, r3) -> reg'.[r3] <- reg'.[r1] ||| r2
+                | ("setr", r1, _, r3) -> reg'.[r3] <- reg'.[r1] 
+                | ("seti", r1, _, r3) -> reg'.[r3] <- r1              
+                | ("gtir", r1, r2, r3) -> reg'.[r3] <- (r1 > reg'.[r2]) |> bool2Int
+                | ("gtri", r1, r2, r3) -> reg'.[r3] <- (reg'.[r1] > r2) |> bool2Int
+                | ("gtrr", r1, r2, r3) -> reg'.[r3] <- (reg'.[r1] > reg'.[r2]) |> bool2Int
+                | ("eqir", r1, r2, r3) -> reg'.[r3] <- (r1 = reg'.[r2]) |> bool2Int
+                | ("eqri", r1, r2, r3) -> reg'.[r3] <- (reg'.[r1] = r2) |> bool2Int
+                | ("eqrr", r1, r2, r3) -> reg'.[r3] <- (reg'.[r1] = reg'.[r2]) |> bool2Int
+                loop reg' (reg'.[ip] + 1)
+        loop reg 0
+
+    
 
     let part1() =        
-        readLinesFromFile(@"day18.txt")
-        ()
+        let (p, ip) = readLinesFromFile(@"day19.txt") |> parseInput
+
+        let cond (reg: int[]) =
+            if reg.[ip] > p.Length
+            then Some reg.[0]
+            else None
+        
+        exec p (Array.zeroCreate 6) ip cond
        
 
 
     let part2() = 
-        readLinesFromFile(@"day18.txt")
-        ()
+        let (p, ip) = readLinesFromFile(@"day19.txt") |> parseInput
+
+        let mutable capt = List.empty
+        let cond (reg: int[]) =
+            let limit = 100000
+            if capt.Length < limit
+            then capt <- (reg |> List.ofArray) :: capt; None
+            else Some 0
+        
+        let regs = Array.zeroCreate 6
+        regs.[0] <- 1
+        exec p regs ip cond |> ignore 
+
+        let nSample = 40
+        let sample = capt |> List.take nSample |> List.rev
+        let reg2 =
+            sample 
+            |> List.map (fun x -> x.[4])
+            |> List.distinct
+            |> List.exactlyOne
+
+        
+        [1..reg2]
+        |> List.filter (fun i -> reg2 % i = 0)
+        |> List.sum
 
         
 
