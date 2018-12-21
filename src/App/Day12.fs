@@ -186,7 +186,7 @@ open Helpers
         let input = readLinesFromFile(@"day12.txt")
         let pots = parseLineOfPot input
         let rules = parseRules input
-        {1L..50000000000L}
+        {1UL..50000000000UL}
         |> Seq.scan (fun p _ -> iterateGenerations rules p) pots
         |> Seq.windowed 3
         |> Seq.indexed
@@ -195,6 +195,6 @@ open Helpers
                 (s2-s1) = (s3-s2)
             )
         |> (fun (i, w)->
-                let diff = (sumPlants w.[1]) - (sumPlants w.[0]) |> uint64
+                let diff = ((sumPlants w.[1]) - (sumPlants w.[0])) |> uint64
                 diff * (50000000000UL / ((uint64 i) + 1UL))
         )
