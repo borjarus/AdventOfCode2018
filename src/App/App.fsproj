@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+
     <Content Include="day20.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -29,7 +30,9 @@
     </Content>
     <None Include="day13.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </None>    <Content Include="day12.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="day10.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -66,7 +69,7 @@
     <Compile Include="Day15.fs" />
     <Compile Include="Day14..fs" />
     <Compile Include="Day13.fs" />
-    <Compile Include="Day11.fs" />
+    <Compile Include="Day12.fs" />    <Compile Include="Day11.fs" />
     <Compile Include="Day10.fs" />
     <Compile Include="Day9.fs" />
     <Compile Include="Day8.fs" />
