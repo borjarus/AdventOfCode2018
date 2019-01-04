@@ -74,6 +74,293 @@ with an X coordinate from 0 to 10 and a Y coordinate from 0 to 10, this total is
 
 What is the total risk level for the smallest rectangle that includes 0,0 and the target's coordinates?
 
+--- Part Two ---
+Okay, it's time to go rescue the man's friend.
+
+As you leave, he hands you some tools: a torch and some climbing gear. You can't equip both tools at once, 
+but you can choose to use neither.
+
+Tools can only be used in certain regions:
+
+In rocky regions, you can use the climbing gear or the torch. You cannot use neither (you'll likely slip and fall).
+In wet regions, you can use the climbing gear or neither tool. You cannot use the torch 
+(if it gets wet, you won't have a light source).
+In narrow regions, you can use the torch or neither tool. You cannot use the climbing gear (it's too bulky to fit).
+You start at 0,0 (the mouth of the cave) with the torch equipped and must reach the target coordinates as quickly as possible. 
+The regions with negative X or Y are solid rock and cannot be traversed. The fastest route might involve entering 
+regions beyond the X or Y coordinate of the target.
+
+You can move to an adjacent region (up, down, left, or right; never diagonally) if your currently equipped tool allows 
+you to enter that region. Moving to an adjacent region takes one minute. (For example, if you have the torch equipped,
+you can move between rocky and narrow regions, but cannot enter wet regions.)
+
+You can change your currently equipped tool or put both away if your new equipment would be valid for your current region. 
+Switching to using the climbing gear, torch, or neither always takes seven minutes, regardless of which tools you start with. 
+(For example, if you are in a rocky region, you can switch from the torch to the climbing gear, but you cannot switch to neither.)
+
+Finally, once you reach the target, you need the torch equipped before you can find him in the dark. The target is always 
+in a rocky region, so if you arrive there with climbing gear equipped, you will need to spend seven minutes switching to your torch.
+
+For example, using the same cave system as above, starting in the top left corner (0,0) and moving to the bottom right corner 
+(the target, 10,10) as quickly as possible, one possible route is as follows, with your current position marked X:
+
+Initially:
+X=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Down:
+M=.|=.|.|=.|=|=.
+X|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Right:
+M=.|=.|.|=.|=|=.
+.X=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Switch from using the torch to neither tool:
+M=.|=.|.|=.|=|=.
+.X=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Right 3:
+M=.|=.|.|=.|=|=.
+.|=|X|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Switch from using neither tool to the climbing gear:
+M=.|=.|.|=.|=|=.
+.|=|X|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Down 7:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..X==..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Right:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..=X=..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Down 3:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||.X.|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Right:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||..X|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Down:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.X..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Right 4:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=X||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Up 2:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===X===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+
+Switch from using the climbing gear to the torch:
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===X===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+This is tied with other routes as the fastest way to reach the target: 45 minutes. In it, 
+21 minutes are spent switching tools (three times, seven minutes each) and the remaining 24 minutes are spent moving.
+
+What is the fewest number of minutes you can take to reach the target?
+
+
 *)
 
 module App.Day22
@@ -81,6 +368,7 @@ open Helpers
 open System
     
     type Types = Narrow | Wet | Rocky
+
     
 
     type Counters = {Gear: int; Torch: int; Neither: int}
@@ -116,6 +404,31 @@ open System
                             cave.Map.[x-1,y].Erosion * cave.Map.[x,y-1].Erosion
                     (gIndex + depth) % 20183
                 {Type= Region.GetType erosion; Location= loc'; Counters= Counters.Default; Erosion= erosion}
+            static member AdjecentCounters (cave: Cave) (x,y) =
+                let map = cave.Map
+                seq {
+                    if x > 0 then yield map.[x-1,y].Counters
+                    if y > 0 then yield map.[x,y-1].Counters
+                    if x < cave.MaxX then yield map.[x+1,y].Counters
+                    if y < cave.MaxY then yield map.[x,y+1].Counters
+                }
+
+    type Dirty = {MaxX: int; MaxY: int; Map: bool[,]}
+        with 
+            static member Build cave =
+                let lenX,lenY = (Array2D.length1 cave), (Array2D.length2 cave)
+                let map = Array2D.create lenX lenY false
+                map.[1,0] <- true
+                map.[1,1] <- true
+                map.[0,1] <- true
+                {MaxX= lenX-1; MaxY= lenY-1; Map= map}
+            static member MarkAdjecent (dirty: Dirty) (x,y) =
+                let map = dirty.Map
+                if x > 0 then map.[x-1,y] <- true
+                if y > 0 then map.[x,y-1] <- true
+                if x < dirty.MaxX then map.[x+1,y] <- true
+                if y < dirty.MaxY then map.[x,y+1] <- true
+                
 
 
     let parseInput (inp: seq<string>) = 
@@ -151,14 +464,14 @@ open System
     let build depth maxTup loc : Cave =
         let (maxX, maxY) = maxTup
         let map = Array2D.create (maxX+1) (maxY+1) Region.RegionZero
-        let cave = {MaxX = maxX; MaxY= maxY; Map= map}
+        let cave: Cave = {MaxX = maxX; MaxY= maxY; Map= map}
         getSeqCords map
         |> Seq.iter (fun (x,y) -> 
             map.[x,y] <- (Cave.NewRegion depth loc cave (x,y)))
         map.[0,0] <- {map.[0,0] with Counters = Counters.MouthTimes}
         cave
 
-    let assessRisk cave =
+    let assessRisk (cave: Cave) =
         cave.Map
         |> Seq.cast<Region>
         |> Seq.sumBy (fun {Type= t} ->
@@ -167,6 +480,50 @@ open System
             | Wet -> 1
             | Narrow -> 2)
  
+    let compare cFrom cTo  adj =
+        let min3 x y z =  min x y |> min z
+        let def = Int32.MaxValue - 8
+        match cFrom with
+        | Rocky ->  { 
+            Torch = min3 cTo.Torch (adj.Torch + 1) (adj.Gear + 8)
+            Gear = min3 cTo.Gear (adj.Gear + 1) (adj.Torch + 8)
+            Neither = def}
+        | Wet ->  { 
+            Gear = min3 cTo.Gear (adj.Gear + 1) (adj.Neither + 8)
+            Neither = min3 cTo.Neither (adj.Neither + 1) (adj.Gear + 8)
+            Torch = def}
+        | Narrow -> {
+            Torch = min3 cTo.Torch (adj.Torch + 1) (adj.Neither + 8)
+            Neither = min3 cTo.Neither (adj.Neither + 1) (adj.Torch + 8)
+            Gear = def}
+
+    let compareAdj (cave: Cave) (dirty: Dirty) (x,y) =
+        dirty.Map.[x,y] <- false
+        let region = cave.Map.[x,y]
+        let adjs = Cave.AdjecentCounters cave (x,y)
+        let updated =
+            (region.Counters, adjs)
+            ||> Seq.fold (compare region.Type)
+        let didImprove = updated <> region.Counters
+        if didImprove then
+            cave.Map.[x,y] <- {region with Counters= updated}
+            Dirty.MarkAdjecent dirty (x,y)
+        didImprove
+
+    let explore (cave: Cave) =
+        let dMap = Dirty.Build cave.Map
+        let rec loop () =
+            let impCount =
+                getSeqCords dMap.Map
+                |> Seq.filter (fun (x,y) ->
+                    dMap.Map.[x,y] && compareAdj cave dMap (x,y)
+                )
+                |> Seq.length
+            if impCount = 0 
+            then ()
+            else loop ()
+        loop ()
+    
  
     let part1() =        
         let (d,t) = readLinesFromFile(@"day22.txt") |> parseInput
@@ -177,6 +534,18 @@ open System
 
 
     let part2() = 
-        let input = readLinesFromFile(@"day22.txt")
-        ()
+        let (d,t) = readLinesFromFile(@"day22.txt") |> parseInput
+        let (t1,t2) = t
+        
+        let sCave = build d (t1,t2) t
+        explore sCave
+
+        let sampTime = sCave.Map.[t1,t2].Counters.Torch
+        let pad = (sampTime - (t1 + t2)) / 2
+        let maxs = t1+pad, t2+pad
+
+        let cave = build d maxs t
+        explore cave
+        cave.Map.[t1,t2].Counters.Torch
+
 
