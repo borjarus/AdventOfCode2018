@@ -78,14 +78,100 @@ What is the total risk level for the smallest rectangle that includes 0,0 and th
 
 module App.Day22
 open Helpers
+open System
     
- 
+    type Types = Narrow | Wet | Rocky
+    
 
+    type Counters = {Gear: int; Torch: int; Neither: int}
+        with
+            static member Default = {Gear= Int32.MaxValue - 8; Torch= Int32.MaxValue - 8; Neither= Int32.MaxValue - 8}
+            static member MouthTimes = {Counters.Default with Gear= 7; Torch = 0}
+    
+    
+    type Region = {
+        Type: Types
+        Location: int * int
+        Counters: Counters
+        Erosion: int
+    }
+    with 
+        static member GetType erosion = 
+            match erosion % 3 with 
+            | 0 -> Rocky
+            | 1 -> Wet
+            | 2 -> Narrow
+        static member RegionZero = {Type= Rocky; Location= -1,-1; Counters= Counters.Default; Erosion= -1}
+
+    type Cave = {MaxX: int; MaxY: int; Map: Region[,]}
+        with 
+            static member NewRegion depth loc (cave: Cave) loc' =
+                let erosion = 
+                    let (x,y) = loc'
+                    let gIndex =
+                        if loc' = (0,0) || loc' = loc then 0
+                        elif y = 0 then x * 16807 
+                        elif x = 0 then y * 48271
+                        else 
+                            cave.Map.[x-1,y].Erosion * cave.Map.[x,y-1].Erosion
+                    (gIndex + depth) % 20183
+                {Type= Region.GetType erosion; Location= loc'; Counters= Counters.Default; Erosion= erosion}
+
+
+    let parseInput (inp: seq<string>) = 
+        let [|l1;l2|] = inp |> Seq.toArray
+        let depth = match l1 with
+                    | Regex @"(\d+)" [d] -> int d
+                    | _ -> failwith "parse error"
+        let target = match l2 with
+            | Regex @"(\d+),(\d+)" [d1; d2] -> int d1, int d2
+            | _ -> failwith "parse error"
+        depth, target
+
+    let display loc (cave: Cave) =
+        let sFun {Type= t} =
+            match t with 
+            | Narrow -> '|'
+            | Wet -> '='
+            | Rocky -> '.'
+        Array.init (cave.MaxY + 1) (fun y -> 
+            Array.init (cave.MaxX + 1) (fun x ->
+                cave.Map.[x,y] |> function
+                    | {Location= (0,0)} -> 'M'
+                    | {Location= loc'} when loc = loc' -> 'T'
+                    | x -> sFun x
+                    ))
+        |> Array.iter (fun (line: char[]) -> printfn "%s" (Array.ofSeq line |> String))
+        cave
+          
+    let getSeqCords (grid: 'a[,]) =
+        let (maxX, maxY) = grid.GetUpperBound(0), grid.GetUpperBound(1)
+        seq { for y in 0..maxY do for x in 0..maxX do yield (x,y)}
+    
+    let build depth maxTup loc : Cave =
+        let (maxX, maxY) = maxTup
+        let map = Array2D.create (maxX+1) (maxY+1) Region.RegionZero
+        let cave = {MaxX = maxX; MaxY= maxY; Map= map}
+        getSeqCords map
+        |> Seq.iter (fun (x,y) -> 
+            map.[x,y] <- (Cave.NewRegion depth loc cave (x,y)))
+        map.[0,0] <- {map.[0,0] with Counters = Counters.MouthTimes}
+        cave
+
+    let assessRisk cave =
+        cave.Map
+        |> Seq.cast<Region>
+        |> Seq.sumBy (fun {Type= t} ->
+            match t with 
+            | Rocky -> 0
+            | Wet -> 1
+            | Narrow -> 2)
  
  
     let part1() =        
-        let input = readLinesFromFile(@"day22.txt")
-        ()
+        let (d,t) = readLinesFromFile(@"day22.txt") |> parseInput
+        build d t t |> assessRisk
+
 
         
 

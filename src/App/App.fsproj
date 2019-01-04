@@ -7,7 +7,9 @@
 
   <ItemGroup>
 
-    <Content Include="day22.txt" />
+    <Content Include="day22.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
 
     <Content Include="day20.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
