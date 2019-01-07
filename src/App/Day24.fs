@@ -182,10 +182,45 @@ how many units would the winning army have?
 
 module App.Day24
 open Helpers
+open System.Text.RegularExpressions
+
+    let parseGrp inp = 
+        let parseLine l =
+            match l with 
+            | Regex  @"(\d+)\D+(\d+)\D+(\d+) (\w+) damage \D+(\d+)" [d1; d2; d3; w1; d4] ->
+                Some (int d1, int d2, int d3, w1, d4)
+            | _ -> None
+        let op =
+            inp 
+            |> Seq.map parseLine
+            |> Seq.choose id
+            |> Seq.toList
+        op
+
+    let parse inp =
+        //let parseArmy grp =
+            
+        let grp = 
+            inp 
+            |> splitBy (fun x -> Regex.Match(x, @"Infection|Immune\ System").Success) 
+            |> Seq.splitInto 2
+            |> Seq.map (fun singleArmyGrp ->
+                
+                let armyName :: oper = 
+                    singleArmyGrp
+                    |> Seq.toList
+                armyName, oper
+            )
+        grp
+        
+
  
     let part1() =        
-        let input = readLinesFromFile(@"day24.txt") 
-        ()
+        let input = readLinesFromFile(@"day24.txt")
+        input 
+        |> parse
+         
+
         
 
 

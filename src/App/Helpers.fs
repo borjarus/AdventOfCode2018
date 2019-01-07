@@ -27,6 +27,15 @@ let getOrDefault key (map: Map<'T,'U>) ``default`` =
     | Some s -> s
     | None -> ``default``
 
+let splitBy f input =
+  let i = ref 0
+  input 
+  |> Seq.map  (fun x -> 
+    if f x then incr i
+    !i, x)
+  |> Seq.groupBy fst
+  |> Seq.map (fun (_, b) -> Seq.map snd b)
+
 
 let (|Regex|_|) pattern input =
         let m = Regex.Match(input, pattern)
