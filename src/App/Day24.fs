@@ -183,42 +183,210 @@ how many units would the winning army have?
 module App.Day24
 open Helpers
 open System.Text.RegularExpressions
+open System
 
-    let parseGrp inp = 
+    let regexSplit p str = 
+        Regex.Split(str, p) 
+        |> Array.filter (String.IsNullOrWhiteSpace >> not) |> List.ofArray
+
+    type Damage = Cold | Fire | Bludgeoning | Slashing | Radiation 
+    type Group = {Army: string; Id: int; Count: int; HP: int; AT: int; Damage: Damage; Initiative: int; Weak: Set<Damage>
+                  Immune: Set<Damage>}
+        with
+            static member CreateDamage = function
+                | "cold" -> Cold
+                | "fire" -> Fire
+                | "bludgeoning" -> Bludgeoning
+                | "slashing" -> Slashing
+                | "radiation" -> Radiation
+            static member EffectivePower grp = grp.AT * grp.Count
+            static member SelectorSortValue grp = (Group.EffectivePower grp, grp.Initiative) 
+
+    type Army = {Name: string; Group: Map<int,Group>}
+    type Armies = Map<string,Army>
+    type BeatleResult  = Victory of Army | Stalemate
+
+    let parseGrp army grp = 
         let parseLine l =
             match l with 
             | Regex  @"(\d+)\D+(\d+)\D+(\d+) (\w+) damage \D+(\d+)" [d1; d2; d3; w1; d4] ->
-                Some (int d1, int d2, int d3, w1, d4)
+                Some (int d1, int d2, int d3, w1, int d4)
             | _ -> None
-        let op =
-            inp 
-            |> Seq.map parseLine
-            |> Seq.choose id
-            |> Seq.toList
-        op
+        let parseWeak l =
+            match l with 
+            | Regex @"weak to ([^;)]+)" [w] -> 
+                w |> regexSplit ", " |> List.map Group.CreateDamage |> Set
+            | _ -> Set.empty
+        let parseImmune l =
+            match l with 
+            | Regex @"immune to ([^;)]+)" [w] -> 
+                w |> regexSplit ", " |> List.map Group.CreateDamage |> Set
+            | _ -> Set.empty
 
-    let parse inp =
-        //let parseArmy grp =
-            
-        let grp = 
-            inp 
-            |> splitBy (fun x -> Regex.Match(x, @"Infection|Immune\ System").Success) 
-            |> Seq.splitInto 2
-            |> Seq.map (fun singleArmyGrp ->
-                
-                let armyName :: oper = 
-                    singleArmyGrp
-                    |> Seq.toList
-                armyName, oper
+        grp 
+        |> Array.mapi (fun idx line ->
+            idx, line
+        ) 
+        |> Array.choose (fun (idx, line) -> 
+            match line |> parseLine with
+            | (Some (count, hp, at, damage, init)) -> 
+                let parsedDamage = damage |> Group.CreateDamage
+                let parsedWeak = line |> parseWeak
+                let parsedImmune = line |> parseImmune
+                Some (idx, {Army= army; Id= idx; Count= count; HP= hp; AT= at; Damage= parsedDamage; Initiative= init; Weak= parsedWeak;
+                Immune= parsedImmune})
+            | None -> None
+        )
+        |> Map           
+
+
+    let parse inp =            
+        inp 
+        |> splitBy (fun x -> Regex.Match(x, @"Infection|Immune\ System").Success) 
+        |> Seq.splitInto 2
+        |> Seq.map (fun inSeq ->
+            inSeq
+            |> Seq.map (fun el ->  
+                let lst = el |> Seq.toList
+                let armyName :: oper = lst
+                armyName, oper |> List.toArray
             )
-        grp
+            |> Seq.toList
+        )
+        |> Seq.map (fun lst ->
+            lst
+            |> List.map (fun el -> 
+                let untrimedArmy, unparsedGroup = el
+                let army = untrimedArmy.Trim(':') 
+                let group = unparsedGroup |> parseGrp army
+                army, {Name= army; Group= group}
+            )
+        )
+        |> Seq.concat
+        |> Map
+
+
+    let groupDamage attacker defender =
+        let damage = attacker.Damage
+        if defender.Immune.Contains damage 
+        then 0
+        else 
+            let ePower = Group.EffectivePower attacker
+            if defender.Weak.Contains damage
+            then ePower * 2
+            else ePower
+    
+    let targetSortVal attacker defender =
+        groupDamage attacker defender,
+            Group.EffectivePower defender,
+            defender.Initiative
+    
+    let selectTargets (attArmy: Army) (defArmy: Army) =
+        let attackers =
+            attArmy.Group 
+            |> Map.toList 
+            |> List.map snd
+            |> List.sortByDescending Group.SelectorSortValue
+        let defenders =
+            defArmy.Group 
+            |> Map.toList
+            |> List.map snd
+            |> Set
         
+        let _, pairings =
+            ((defenders, []), attackers)
+            ||> List.fold (fun (defenders, pairrings) attacker ->
+                let target =
+                    if Set.isEmpty defenders
+                    then None
+                    else
+                        let (target,damage) =
+                            defenders
+                            |> Seq.map (fun defendr ->
+                                defendr, groupDamage attacker defendr
+                            )
+                            |> Seq.sortByDescending (fun (def,_) ->
+                                targetSortVal attacker def
+                            )
+                            |> Seq.head
+                        if damage = 0 then None else Some target
+                let defenders =
+                    match target with
+                    | None -> defenders
+                    | Some t -> defenders.Remove t
+                defenders, (attacker,target) :: pairrings)
+        pairings
+        |> List.choose (fun (att, def) ->
+            match def with
+            | Some d -> Some (att, d)
+            | _ -> None
+        )
+
+    
+    let groupFight (armies: Armies) pairing =
+        let ((attArmyId, attArmyGrpId),(defArmyId, defArmyGrpId)) = pairing
+        let attArmy = armies.[attArmyId]
+        let defArmy = armies.[defArmyId]
+        if not (attArmy.Group.ContainsKey attArmyGrpId
+            && defArmy.Group.ContainsKey defArmyGrpId)
+        then armies
+        else
+            let attGroup = attArmy.Group.[attArmyGrpId]
+            if attGroup.Count <= 0 
+            then armies
+            else 
+                let defGroup = defArmy.Group.[defArmyGrpId]
+                let damage = groupDamage attGroup defGroup
+                let unitLost = damage / defGroup.HP
+
+                let defGroup' = {defGroup with Count= defGroup.Count - unitLost}
+                let defArmy' =
+                    if defGroup'.Count <= 0 
+                    then {defArmy with Group= defArmy.Group.Remove defGroup'.Id}
+                    else {defArmy with Group= defArmy.Group.Add (defGroup'.Id, defGroup')}
+                armies.Add (defArmy'.Name, defArmy')
+
+
+    let groupMap (groups: Group list) =
+        groups
+        |> List.map (fun g -> g.Id, g)
+        |> Map
+    
+    let rec fight (armies: Armies) =
+        let [(_,a1); (_,a2)] = Map.toList armies
+
+        if a1.Group.Count = 0 
+        then Victory a1 
+        elif a2.Group.Count = 0 
+        then Victory a2
+        else 
+            let pairings =
+                (selectTargets a1 a2) @ (selectTargets a2 a1)
+                |> List.sortByDescending (fun (att,_) -> att.Initiative)
+                |> List.map (fun (att,def)->
+                    (att.Army, att.Id), (def.Army, def.Id)
+                )
+
+            let veteran = (armies, pairings) ||> List.fold (groupFight) 
+
+            if armies = veteran
+            then Stalemate
+            else fight veteran
+    
+    let unitCount army =
+        army.Group
+        |> Map.toSeq
+        |> Seq.sumBy (fun (_, g) -> g.Count)
 
  
     let part1() =        
         let input = readLinesFromFile(@"day24.txt")
-        input 
-        |> parse
+        let (Victory army) = input |> parse |> fight
+        
+        //unitCount army
+        army
+
+
          
 
         
