@@ -28,7 +28,7 @@
 
                 | "22" -> sprintf "%A" <| Day22.part2()
                 | "23" -> sprintf "%A" <| Day23.part2()
-                | "24" -> sprintf "%A" <| Day24.part1()
+                | "24" -> sprintf "%A" <| Day24.part2()
 
                 | _ -> ""
             | _ -> "Insert number of day as parameter" 
