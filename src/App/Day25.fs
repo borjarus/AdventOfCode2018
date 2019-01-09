@@ -100,11 +100,36 @@ How many constellations are formed by the fixed points in spacetime?
 module App.Day25
 open Helpers
 
+    type Coordinates = int * int * int * int
 
+    let parseInput inp = 
+        match inp with
+        | Regex @"(-?\d+)\D+?(-?\d+)\D+?(-?\d+)\D+?(-?\d+)" [d1; d2; d3; d4] -> int d1, int d2, int d3, int d4
+        | _ -> failwith "parse error"
+    
+    let distance (x,y,z,w) (x',y',z',w') =
+        abs (x- x') + abs (y- y') + abs( z- z') + abs(w- w')
+    
+    let rec loopFilter xs' x =
+        let constellationPoints, remaining = List.partition (fun x' -> distance x x' <= 3) xs'
+        List.fold loopFilter remaining constellationPoints
+    
+    let rec count acc p =
+        match p with 
+        | [] -> acc
+        | x :: xs ->
+            let xs' = loopFilter xs x
+            count (acc + 1) xs'
  
     let part1() =        
-        let input = readLinesFromFile(@"day25.txt")
-        ()
+        let input = 
+            readLinesFromFile(@"day25.txt") 
+            |> List.ofSeq
+            |> List.map parseInput
+            |> count 0
+
+
+        input
 
     let part2() = 
         let input = readLinesFromFile(@"day25.txt") 
